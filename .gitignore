@@ -1,0 +1,15 @@
+#Environment Variable
+.env
+out
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Logs and debugging
+
+
+# Go-specific
+*.mod
+*.sum
+*.test
