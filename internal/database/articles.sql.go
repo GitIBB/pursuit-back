@@ -7,31 +7,40 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
 
 const createArticle = `-- name: CreateArticle :one
-INSERT INTO articles (id, created_at, updated_at, user_id, title, body)
+INSERT INTO articles (id, created_at, updated_at, user_id, title, body, image_url)
 VALUES (
     gen_random_uuid(),
     NOW(),
     NOW(),
     $1,
     $2,
-    $3
+    $3,
+    $4
 )
-RETURNING id, created_at, updated_at, user_id, title, body
+RETURNING id, created_at, updated_at, user_id, title, body, image_url
 `
 
 type CreateArticleParams struct {
-	UserID uuid.UUID
-	Title  string
-	Body   string
+	UserID   uuid.UUID
+	Title    string
+	Body     json.RawMessage
+	ImageUrl sql.NullString
 }
 
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
-	row := q.db.QueryRowContext(ctx, createArticle, arg.UserID, arg.Title, arg.Body)
+	row := q.db.QueryRowContext(ctx, createArticle,
+		arg.UserID,
+		arg.Title,
+		arg.Body,
+		arg.ImageUrl,
+	)
 	var i Article
 	err := row.Scan(
 		&i.ID,
@@ -40,12 +49,23 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.UserID,
 		&i.Title,
 		&i.Body,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
+const deleteArticle = `-- name: DeleteArticle :exec
+DELETE FROM articles
+where id = $1
+`
+
+func (q *Queries) DeleteArticle(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteArticle, id)
+	return err
+}
+
 const getArticle = `-- name: GetArticle :one
-Select id, created_at, updated_at, user_id, title, body FROM articles
+Select id, created_at, updated_at, user_id, title, body, image_url FROM articles
 WHERE id = $1
 `
 
@@ -59,17 +79,24 @@ func (q *Queries) GetArticle(ctx context.Context, id uuid.UUID) (Article, error)
 		&i.UserID,
 		&i.Title,
 		&i.Body,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getArticles = `-- name: GetArticles :many
-SELECT id, created_at, updated_at, user_id, title, body FROM articles
+SELECT id, created_at, updated_at, user_id, title, body, image_url FROM articles
 ORDER BY created_at ASC
+LIMIT $1 OFFSET $2
 `
 
-func (q *Queries) GetArticles(ctx context.Context) ([]Article, error) {
-	rows, err := q.db.QueryContext(ctx, getArticles)
+type GetArticlesParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetArticles(ctx context.Context, arg GetArticlesParams) ([]Article, error) {
+	rows, err := q.db.QueryContext(ctx, getArticles, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +111,7 @@ func (q *Queries) GetArticles(ctx context.Context) ([]Article, error) {
 			&i.UserID,
 			&i.Title,
 			&i.Body,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -96,4 +124,59 @@ func (q *Queries) GetArticles(ctx context.Context) ([]Article, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getArticlesByUserId = `-- name: GetArticlesByUserId :many
+SELECT id, created_at, updated_at, user_id, title, body, image_url FROM articles
+WHERE user_id = $1
+ORDER BY created_at ASC
+LIMIT $2 OFFSET $3
+`
+
+type GetArticlesByUserIdParams struct {
+	UserID uuid.UUID
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetArticlesByUserId(ctx context.Context, arg GetArticlesByUserIdParams) ([]Article, error) {
+	rows, err := q.db.QueryContext(ctx, getArticlesByUserId, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Article
+	for rows.Next() {
+		var i Article
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UserID,
+			&i.Title,
+			&i.Body,
+			&i.ImageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTotalArticlesCount = `-- name: GetTotalArticlesCount :one
+SELECT COUNT(*) FROM articles
+`
+
+func (q *Queries) GetTotalArticlesCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getTotalArticlesCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

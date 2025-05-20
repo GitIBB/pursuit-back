@@ -6,6 +6,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +18,8 @@ type Article struct {
 	UpdatedAt time.Time
 	UserID    uuid.UUID
 	Title     string
-	Body      string
+	Body      json.RawMessage
+	ImageUrl  sql.NullString
 }
 
 type RefreshToken struct {

@@ -1,8 +1,5 @@
 package api
 
-// Package middleware provides HTTP middleware for the Pursuit application.
-// It includes authentication, browser awareness, and metrics tracking middleware.
-
 import (
 	"context"
 	"net/http"

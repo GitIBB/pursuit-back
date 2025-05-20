@@ -8,8 +8,8 @@ func (cfg *APIConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Reset is only allowed in dev environment"))
 		return
 	}
-	cfg.FileserverHits.Store(0)
-	cfg.DB.Reset(r.Context())
+	cfg.fileserverHits.Store(0)
+	cfg.db.Reset(r.Context())
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0 and database reset"))
 }

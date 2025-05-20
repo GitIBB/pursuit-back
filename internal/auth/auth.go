@@ -24,7 +24,7 @@ const (
 // ErrNoAuthHeaderIncluded
 var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
 
-// HasPassword -
+// HashPassword -
 func HashPassword(password string) (string, error) {
 	dat, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

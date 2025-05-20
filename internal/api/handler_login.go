@@ -31,7 +31,7 @@ func (cfg *APIConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email) // Call the GetUserByEmail function to retrieve the user by email
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		respondWithError(w, http.StatusUnauthorized, "User does not exist", err)
 		return
 	}
 
