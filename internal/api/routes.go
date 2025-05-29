@@ -1,6 +1,8 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func (cfg *APIConfig) SetupRoutes(mux *http.ServeMux) {
 	// Health Check
@@ -8,6 +10,7 @@ func (cfg *APIConfig) SetupRoutes(mux *http.ServeMux) {
 
 	// Auth endpoints
 	mux.Handle("POST /api/login", cfg.middlewareBrowserAwareness(http.HandlerFunc(cfg.handlerLogin))) // Register login endpoint at /login path, delegates handling to the handlerLogin function
+	mux.Handle("POST /api/logout", cfg.middlewareAuth(http.HandlerFunc(cfg.handlerLogout)))           // Register logout endpoint at /logout path, delegates handling to the handlerLogout function
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefresh)                                           // Register refresh endpoint at /refresh path, delegates handling to the handlerRefresh function
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevoke)                                             // Register revoke endpoint at /revoke path, delegates handling to the handlerRevoke function
 
@@ -15,6 +18,7 @@ func (cfg *APIConfig) SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/users", cfg.handlerUsersCreate)                                  // Register user creation endpoint at /users path, delegates handling to the handlerUsersCreate function
 	mux.Handle("PUT /api/users", cfg.middlewareAuth(http.HandlerFunc(cfg.handlerUsersUpdate))) // Register user update endpoint at /users path, delegates handling to the handlerUsersUpdate function
 	mux.Handle("GET /api/users", cfg.middlewareAuth(http.HandlerFunc(cfg.handlerUsersGet)))    // Register user retrieval endpoint at /users path, delegates handling to the handlerUsersGet function
+	mux.Handle("GET /api/me", cfg.middlewareAuth(http.HandlerFunc(cfg.handlerMe)))             // Register user (me) retrieval endpoint at /me path, delegates handling to the handlerMe function
 
 	// Article endpoints
 	mux.Handle("POST /api/articles", cfg.middlewareAuth(http.HandlerFunc(cfg.handlerArticlesCreate)))               // Register article creation endpoint at /articles path, delegates handling to the handlerArticlesCreate function

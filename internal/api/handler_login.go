@@ -75,7 +75,8 @@ func (cfg *APIConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,
 			Path:     "/",
 			Expires:  time.Now().Add(time.Hour), // Set the expiration time for the cookie to match the token expiration
-			Secure:   true,                      // Set to true if using HTTPS
+			Secure:   false,                     // Set to true if using HTTPS (during production). FALSE DURING DEVELOPMENT
+			SameSite: http.SameSiteNoneMode,     // Allow cross-site usage
 		})
 	}
 

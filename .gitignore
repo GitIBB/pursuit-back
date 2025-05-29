@@ -13,3 +13,6 @@ out
 *.mod
 *.sum
 *.test
+
+# Certs
+.certs/
