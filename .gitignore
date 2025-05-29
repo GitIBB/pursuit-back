@@ -10,8 +10,6 @@ out
 
 
 # Go-specific
-*.mod
-*.sum
 *.test
 
 # Certs
