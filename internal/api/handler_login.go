@@ -21,27 +21,27 @@ func (cfg *APIConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		RefreshToken string `json:"refresh_token"`
 	}
 
-	decoder := json.NewDecoder(r.Body) // Create a new JSON decoder for the request body
-	params := parameters{}             // Create a new instance of the parameters struct
-	err := decoder.Decode(&params)     // Decode the request body into the parameters struct
+	decoder := json.NewDecoder(r.Body) // create a new JSON decoder for request body
+	params := parameters{}             // create a new instance of parameters struct
+	err := decoder.Decode(&params)     // decode the request body into parameters struct
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to decode request parameters", err)
 		return
 	}
 
-	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email) // Call the GetUserByEmail function to retrieve the user by email
+	user, err := cfg.db.GetUserByEmail(r.Context(), params.Email) // retrieve the user by email
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "User does not exist", err)
 		return
 	}
 
-	err = auth.CheckPasswordHash(params.Password, user.HashedPassword) // Check if the provided password matches the stored hashed password
+	err = auth.CheckPasswordHash(params.Password, user.HashedPassword) // check if provided password matches the stored hashed password
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}
 
-	accessToken, err := auth.MakeJWT( // Create a new JWT token for the user
+	accessToken, err := auth.MakeJWT( // Create a new JWT token for user
 		user.ID,
 		cfg.jwtSecret,
 		time.Hour,
@@ -59,28 +59,28 @@ func (cfg *APIConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		UserID:    user.ID,
 		Token:     refreshToken,
-		ExpiresAt: time.Now().Add(time.Hour * 24 * 60), // Set the expiration time for the refresh token to 60 days
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 60), // set the expiration time for the refresh token to 60 days
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to save refresh token in database", err)
 		return
 	}
 
-	// Check if the client is a browser
+	// check if the client is a browser
 	if IsBrowser(r) {
-		// Set a cookie for browser clients
+		// set a cookie for browser clients
 		http.SetCookie(w, &http.Cookie{
 			Name:     "auth-token",
 			Value:    accessToken,
 			HttpOnly: true,
 			Path:     "/",
 			Expires:  time.Now().Add(time.Hour), // Set the expiration time for the cookie to match the token expiration
-			Secure:   false,                     // Set to true if using HTTPS (during production). FALSE DURING DEVELOPMENT
-			SameSite: http.SameSiteNoneMode,     // Allow cross-site usage
+			Secure:   true,                      // set to true if using HTTPS (during production).
+			SameSite: http.SameSiteNoneMode,     // allow cross-site usage
 		})
 	}
 
-	respondWithJSON(w, http.StatusOK, response{ // Create a new response instance containing the user data and token
+	respondWithJSON(w, http.StatusOK, response{ // create a new response instance containing the user data and token
 		User: User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,

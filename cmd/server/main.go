@@ -17,8 +17,8 @@ import (
 // headers to the response.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")            // Adjust origin as needed
-		w.Header().Set("Access-Control-Allow-Credentials", "false")                       // Allow credentials to be included in requests / cookies
+		w.Header().Set("Access-Control-Allow-Origin", "https://localhost:5173")           // Adjust origin as needed
+		w.Header().Set("Access-Control-Allow-Credentials", "true")                        // Allow credentials to be included in requests / cookies
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS") // Allow specific HTTP methods
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")     // Allow specific headers
 
@@ -61,11 +61,15 @@ func main() {
 	apiCfg.SetupRoutes(mux)        // Setup routes for the API using the provided configuration
 	handler := corsMiddleware(mux) // Apply CORS middleware to the mux
 
+	// path to cert / key files
+	certFile := "../../certs/localhost.pem"
+	keyFile := "../../certs/localhost-key.pem"
+
 	srv := http.Server{ // Server config
 		Addr:    ":" + port,
 		Handler: handler,
 	}
 
-	log.Printf("Serving on port: %s\n", port) // log server startup and which port it is listening on
-	log.Fatal(srv.ListenAndServe())           // will log error and exit program if server fails
+	log.Printf("Serving on port: %s\n", port)           // log server startup and which port it is listening on
+	log.Fatal(srv.ListenAndServeTLS(certFile, keyFile)) // will log error and exit program if server fails
 }

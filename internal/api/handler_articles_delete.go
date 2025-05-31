@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/GitIBB/pursuit/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -17,16 +16,11 @@ func (cfg *APIConfig) handlerArticlesDelete(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Extract the token from the Authorization header
-	token, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Could not find JWT", err)
-	}
-
-	// Validate the JWT token and extract the user ID
-	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid JWT", err)
+	// Retrieve the user ID from the context
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: missing user ID", nil)
+		return
 	}
 
 	// Retrieve the article from the database using the article ID

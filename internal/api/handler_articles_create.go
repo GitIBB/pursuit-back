@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/GitIBB/pursuit/internal/auth"
 	"github.com/GitIBB/pursuit/internal/database"
 	"github.com/google/uuid"
 )
@@ -37,19 +36,15 @@ func (cfg *APIConfig) handlerArticlesCreate(w http.ResponseWriter, r *http.Reque
 		ArticleBody ArticleBody `json:"article_body"`
 	}
 
-	token, err := auth.GetBearerToken(r.Header) // Extract the token from the request header
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Could not find JWT", err)
-		return
-	}
-	userID, err := auth.ValidateJWT(token, cfg.jwtSecret) // Validate the JWT token
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Could not validate JWT", err)
+	// Retrieve the user ID from the context
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: missing user ID", nil)
 		return
 	}
 
 	// Parse the form data (for image upload)
-	err = r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
+	err := r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to parse form data", err)
 		return

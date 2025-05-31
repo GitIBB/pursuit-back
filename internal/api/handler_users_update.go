@@ -6,6 +6,7 @@ import (
 
 	"github.com/GitIBB/pursuit/internal/auth"
 	"github.com/GitIBB/pursuit/internal/database"
+	"github.com/google/uuid"
 )
 
 func (cfg *APIConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request) {
@@ -18,33 +19,28 @@ func (cfg *APIConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 		User
 	}
 
-	token, err := auth.GetBearerToken(r.Header) // Get the bearer token from the request
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Failed to find JWT", err)
+	// Retrieve the user ID from the context
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
+	if !ok {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized: missing user ID", nil)
 		return
 	}
 
-	userID, err := auth.ValidateJWT(token, cfg.jwtSecret) // Validate the JWT token
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Failed to validate JWT", err)
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body) // Create a new JSON decoder for the request body
-	params := parameters{}             // Create a new instance of the parameters struct
-	err = decoder.Decode(&params)      // Decode the request body into the parameters struct
+	decoder := json.NewDecoder(r.Body) // new JSON decoder for request body
+	params := parameters{}             // new instance of parameters struct
+	err := decoder.Decode(&params)     // decode request body into parameters struct
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to decode request parameters", err)
 		return
 	}
 
-	hashedPassword, err := auth.HashPassword(params.Password) // Hash the password
+	hashedPassword, err := auth.HashPassword(params.Password) // hash password
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to hash password", err)
 		return
 	}
 
-	user, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{
+	user, err := cfg.db.UpdateUser(r.Context(), database.UpdateUserParams{ // update user data in db
 		ID:             userID,
 		Email:          params.Email,
 		Username:       params.Username,
@@ -55,7 +51,7 @@ func (cfg *APIConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, response{ // Respond with the updated user data
+	respondWithJSON(w, http.StatusOK, response{ // respond with updated user data
 		User: User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
