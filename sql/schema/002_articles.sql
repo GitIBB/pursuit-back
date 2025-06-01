@@ -6,7 +6,7 @@ CREATE TABLE articles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     body JSONB NOT NULL,
-    image_url TEXT
+    image_url TEXT,
 );
 
 -- +goose Down

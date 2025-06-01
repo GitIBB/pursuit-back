@@ -33,8 +33,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 func main() {
 	const port = "8080" // sets port for the server to listen on
 
-	godotenv.Load("/home/hermit/workspace/pursuit/pursuit-back/.env") // Load environment variables from .env file
-	dbURL := os.Getenv("DB_URL")                                      // Get database URL from environment variable
+	godotenv.Load("../../.env")  // Load environment variables from .env file
+	dbURL := os.Getenv("DB_URL") // Get database URL from environment variable
 	if dbURL == "" {
 		log.Fatal("DB_URL not set")
 	}

@@ -24,9 +24,9 @@ type Article struct { // struct to hold article data
 }
 
 type ArticleBody struct { // struct to hold article body data
-	Introduction string `json:"introduction"`
-	MainBody     string `json:"main_body"`
-	End          string `json:"end"`
+	Headers map[string]string `json:"headers"`
+	Content map[string]string `json:"content"`
+	Images  map[string]string `json:"images"`
 }
 
 // Handler function to create a new article
@@ -166,19 +166,19 @@ func (cfg *APIConfig) handlerArticlesCreate(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-func validateArticle(body ArticleBody) (ArticleBody, error) { // Validate the article body
-	// Check for empty fields in the article body
-	if len(body.Introduction) == 0 {
+func validateArticle(body ArticleBody) (ArticleBody, error) { // Function to validate the article body
+	// Check if headers and content are not nil and contain required fields
+	if body.Content == nil {
+		return body, errors.New("headers and content are required")
+	}
+	if body.Content["introduction"] == "" {
 		return body, errors.New("introduction cannot be empty")
 	}
-	if len(body.MainBody) == 0 {
+	if body.Content["mainBody"] == "" {
 		return body, errors.New("main body cannot be empty")
 	}
-	if len(body.End) == 0 {
-		return body, errors.New("end cannot be empty")
+	if body.Content["conclusion"] == "" {
+		return body, errors.New("conclusion cannot be empty")
 	}
-
-	// alternatively, set a max length here
-
-	return body, nil // Return the validated article body
+	return body, nil
 }
