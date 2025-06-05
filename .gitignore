@@ -13,4 +13,4 @@ out
 *.test
 
 # Certs
-.certs/
+.certs

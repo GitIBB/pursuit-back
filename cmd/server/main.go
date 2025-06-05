@@ -62,8 +62,8 @@ func main() {
 	handler := corsMiddleware(mux) // Apply CORS middleware to the mux
 
 	// path to cert / key files
-	certFile := "../../certs/localhost.pem"
-	keyFile := "../../certs/localhost-key.pem"
+	certFile := "../../.certs/localhost.pem"
+	keyFile := "../../.certs/localhost-key.pem"
 
 	srv := http.Server{ // Server config
 		Addr:    ":" + port,
