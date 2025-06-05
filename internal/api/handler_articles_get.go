@@ -24,6 +24,20 @@ func (cfg *APIConfig) handlerArticlesGet(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Fetch the username using GetUserByID
+	user, err := cfg.db.GetUserByID(r.Context(), dbArticle.UserID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve user", err)
+		return
+	}
+
+	// After fetching dbArticle
+	category, err := cfg.db.GetCategoryByID(r.Context(), dbArticle.CategoryID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve category", err)
+		return
+	}
+
 	var body ArticleBody                        // Initialize an empty ArticleBody struct
 	err = json.Unmarshal(dbArticle.Body, &body) // Unmarshal the article body from JSON into the struct
 	if err != nil {
@@ -45,10 +59,12 @@ func (cfg *APIConfig) handlerArticlesGet(w http.ResponseWriter, r *http.Request)
 		Title:     dbArticle.Title,
 		Body:      body,
 		ImageUrl:  imageUrl,
+		Username:  user.Username,
+		Category:  category.Name,
 	})
 }
 
-func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Request) {
+func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Request) { // Handler function to retrieve all articles with pagination
 	// parse query parameters for pagination
 	page := r.URL.Query().Get("page")   // Get the page query parameter from the URL
 	limit := r.URL.Query().Get("limit") // Get the limit query parameter from the URL
@@ -65,7 +81,7 @@ func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Req
 	}
 	if limit != "" {
 		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
-			limitNum = 1 // Set limitNum to the parsed value if it's a valid positive integer
+			limitNum = l // <-- Use the parsed value!
 		}
 	}
 
@@ -94,9 +110,9 @@ func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	authorID := uuid.Nil                             // Initialize authorID to uuid.Nil
-	authorIDString := r.URL.Query().Get("author_id") // Get the author_id query parameter from the URL
-	if authorIDString != "" {                        // If author_id is provided
+	authorID := uuid.Nil                           // Initialize authorID to uuid.Nil
+	authorIDString := r.URL.Query().Get("user_id") // Get the author_id query parameter from the URL
+	if authorIDString != "" {                      // If author_id is provided
 		authorID, err = uuid.Parse(authorIDString) // Parse the author_id string to a UUID
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, "Invalid author ID", err)
@@ -118,6 +134,13 @@ func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Req
 			return
 		}
 
+		// Fetch the category using GetCategoryByID
+		category, err := cfg.db.GetCategoryByID(r.Context(), dbArticle.CategoryID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to retrieve category", err)
+			return
+		}
+
 		// Handle sql.NullString for ImageUrl
 		imageUrl := ""
 		if dbArticle.ImageUrl.Valid {
@@ -132,6 +155,8 @@ func (cfg *APIConfig) handlerArticlesRetrieve(w http.ResponseWriter, r *http.Req
 			Title:     dbArticle.Title,
 			Body:      body,
 			ImageUrl:  imageUrl,
+			Username:  dbArticle.Username,
+			Category:  category.Name,
 		})
 	}
 	// Create the response with metadata

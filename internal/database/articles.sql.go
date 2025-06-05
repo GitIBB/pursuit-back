@@ -9,12 +9,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const createArticle = `-- name: CreateArticle :one
-INSERT INTO articles (id, created_at, updated_at, user_id, title, body, image_url)
+INSERT INTO articles (id, created_at, updated_at, user_id, category_id, title, body, image_url)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -22,21 +23,24 @@ VALUES (
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5
 )
-RETURNING id, created_at, updated_at, user_id, title, body, image_url
+RETURNING id, created_at, updated_at, user_id, category_id, title, body, image_url
 `
 
 type CreateArticleParams struct {
-	UserID   uuid.UUID
-	Title    string
-	Body     json.RawMessage
-	ImageUrl sql.NullString
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+	Title      string
+	Body       json.RawMessage
+	ImageUrl   sql.NullString
 }
 
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
 	row := q.db.QueryRowContext(ctx, createArticle,
 		arg.UserID,
+		arg.CategoryID,
 		arg.Title,
 		arg.Body,
 		arg.ImageUrl,
@@ -47,6 +51,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UserID,
+		&i.CategoryID,
 		&i.Title,
 		&i.Body,
 		&i.ImageUrl,
@@ -65,28 +70,46 @@ func (q *Queries) DeleteArticle(ctx context.Context, id uuid.UUID) error {
 }
 
 const getArticle = `-- name: GetArticle :one
-Select id, created_at, updated_at, user_id, title, body, image_url FROM articles
-WHERE id = $1
+Select a.id, a.created_at, a.updated_at, a.user_id, a.category_id, a.title, a.body, a.image_url, users.username
+FROM articles a
+JOIN users on a.user_id = users.id
+WHERE a.id = $1
 `
 
-func (q *Queries) GetArticle(ctx context.Context, id uuid.UUID) (Article, error) {
+type GetArticleRow struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+	Title      string
+	Body       json.RawMessage
+	ImageUrl   sql.NullString
+	Username   string
+}
+
+func (q *Queries) GetArticle(ctx context.Context, id uuid.UUID) (GetArticleRow, error) {
 	row := q.db.QueryRowContext(ctx, getArticle, id)
-	var i Article
+	var i GetArticleRow
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UserID,
+		&i.CategoryID,
 		&i.Title,
 		&i.Body,
 		&i.ImageUrl,
+		&i.Username,
 	)
 	return i, err
 }
 
 const getArticles = `-- name: GetArticles :many
-SELECT id, created_at, updated_at, user_id, title, body, image_url FROM articles
-ORDER BY created_at ASC
+SELECT a.id, a.created_at, a.updated_at, a.user_id, a.category_id, a.title, a.body, a.image_url, users.username
+FROM articles a
+JOIN users ON a.user_id = users.id
+ORDER BY a.created_at ASC
 LIMIT $1 OFFSET $2
 `
 
@@ -95,23 +118,37 @@ type GetArticlesParams struct {
 	Offset int32
 }
 
-func (q *Queries) GetArticles(ctx context.Context, arg GetArticlesParams) ([]Article, error) {
+type GetArticlesRow struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+	Title      string
+	Body       json.RawMessage
+	ImageUrl   sql.NullString
+	Username   string
+}
+
+func (q *Queries) GetArticles(ctx context.Context, arg GetArticlesParams) ([]GetArticlesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getArticles, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Article
+	var items []GetArticlesRow
 	for rows.Next() {
-		var i Article
+		var i GetArticlesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserID,
+			&i.CategoryID,
 			&i.Title,
 			&i.Body,
 			&i.ImageUrl,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}
@@ -127,9 +164,11 @@ func (q *Queries) GetArticles(ctx context.Context, arg GetArticlesParams) ([]Art
 }
 
 const getArticlesByUserId = `-- name: GetArticlesByUserId :many
-SELECT id, created_at, updated_at, user_id, title, body, image_url FROM articles
-WHERE user_id = $1
-ORDER BY created_at ASC
+SELECT a.id, a.created_at, a.updated_at, a.user_id, a.category_id, a.title, a.body, a.image_url, users.username
+FROM articles a
+JOIN users ON a.user_id = users.id
+WHERE a.user_id = $1
+ORDER BY a.created_at ASC
 LIMIT $2 OFFSET $3
 `
 
@@ -139,23 +178,37 @@ type GetArticlesByUserIdParams struct {
 	Offset int32
 }
 
-func (q *Queries) GetArticlesByUserId(ctx context.Context, arg GetArticlesByUserIdParams) ([]Article, error) {
+type GetArticlesByUserIdRow struct {
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+	Title      string
+	Body       json.RawMessage
+	ImageUrl   sql.NullString
+	Username   string
+}
+
+func (q *Queries) GetArticlesByUserId(ctx context.Context, arg GetArticlesByUserIdParams) ([]GetArticlesByUserIdRow, error) {
 	rows, err := q.db.QueryContext(ctx, getArticlesByUserId, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Article
+	var items []GetArticlesByUserIdRow
 	for rows.Next() {
-		var i Article
+		var i GetArticlesByUserIdRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UserID,
+			&i.CategoryID,
 			&i.Title,
 			&i.Body,
 			&i.ImageUrl,
+			&i.Username,
 		); err != nil {
 			return nil, err
 		}

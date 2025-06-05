@@ -13,13 +13,19 @@ import (
 )
 
 type Article struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	UserID    uuid.UUID
-	Title     string
-	Body      json.RawMessage
-	ImageUrl  sql.NullString
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	UserID     uuid.UUID
+	CategoryID uuid.UUID
+	Title      string
+	Body       json.RawMessage
+	ImageUrl   sql.NullString
+}
+
+type Category struct {
+	ID   uuid.UUID
+	Name string
 }
 
 type RefreshToken struct {
